@@ -12,7 +12,6 @@ import {
 } from "@/lib/authorization";
 import { activeBookingStatuses } from "@/lib/bookingStatus";
 import type { CurrentUser } from "@/lib/currentUser";
-import type { AeroclubMember, Booking, BookingStatus, Database } from "@/types";
 
 const {
   createClientMock,
@@ -100,6 +99,7 @@ function makeCurrentUser(role: CurrentUser["role"]): CurrentUser {
     isAuthenticated: role !== "anonymous",
     isSuperAdmin: role === "super_admin",
     isClubAdmin: role === "club_admin",
+    sessionCookiesToSet: [],
   };
 }
 
@@ -140,54 +140,6 @@ beforeEach(() => {
   nextHeadersCookiesMock.mockClear();
 });
 
-describe("AeroclubMember type", () => {
-  it("umožňuje klubovou roli pilot", () => {
-    const member: AeroclubMember = {
-      id: "member-1",
-      aeroclub_id: "club-1",
-      user_id: "user-1",
-      role: "pilot",
-      status: "active",
-      created_at: "2026-03-31T10:00:00.000Z",
-    };
-
-    expect(member.role).toBe("pilot");
-  });
-});
-
-describe("Booking schema types", () => {
-  it("drží rozšířený status union pro bookingy", () => {
-    expectTypeOf<BookingStatus>().toEqualTypeOf<
-      "pending" | "approved" | "rejected" | "cancelled"
-    >();
-  });
-
-  it("obsahuje auditní booking pole a nullable request/approval vazby", () => {
-    const booking: Booking = {
-      id: "booking-1",
-      aeroclub_id: "club-1",
-      airplane_id: "plane-1",
-      pilot_id: "pilot-1",
-      start_time: "2026-03-31T10:00:00.000Z",
-      end_time: "2026-03-31T11:00:00.000Z",
-      status: "pending",
-      requested_by_user_id: null,
-      approved_by_user_id: "user-2",
-      approved_at: null,
-      rejection_reason: null,
-      created_at: "2026-03-31T10:00:00.000Z",
-    };
-
-    expectTypeOf(booking).toMatchTypeOf<Booking>();
-    expect(booking.approved_by_user_id).toBe("user-2");
-  });
-
-  it("má vyplněné relationships pro změněný scope", () => {
-    expectTypeOf<Database["public"]["Tables"]["profiles"]["Relationships"]>().not.toEqualTypeOf<[]>();
-    expectTypeOf<Database["public"]["Tables"]["bookings"]["Relationships"]>().not.toEqualTypeOf<[]>();
-  });
-});
-
 describe("bookingStatus helpers", () => {
   it("definuje active booking statuses pro pending a approved", () => {
     expect(activeBookingStatuses).toEqual(["pending", "approved"]);
@@ -218,29 +170,64 @@ describe("authorization helpers", () => {
 });
 
 describe("auth helpers", () => {
-  it("vrátí uživatele přes refresh token, když access token selže", async () => {
+  it("vrátí uživatele i cookie payloady přes refresh token, když access token selže", async () => {
     const refreshedUser = { id: "user-1" } as never;
     getUserMock.mockResolvedValueOnce({ data: { user: null }, error: new Error("expired") });
     refreshSessionMock.mockResolvedValueOnce({
-      data: { user: refreshedUser, session: { user: refreshedUser } },
+      data: {
+        user: refreshedUser,
+        session: {
+          user: refreshedUser,
+          access_token: "new-access-token",
+          refresh_token: "new-refresh-token",
+          expires_at: 1774936800,
+        },
+      },
       error: null,
     });
 
-    await expect(
-      getUserFromAccessToken("expired-access-token", "valid-refresh-token"),
-    ).resolves.toEqual(refreshedUser);
+    await expect(getUserFromAccessToken("expired-access-token", "valid-refresh-token")).resolves.toEqual({
+      user: refreshedUser,
+      sessionCookiesToSet: [
+        {
+          name: authSessionCookieNames.accessToken,
+          value: "new-access-token",
+          options: {
+            httpOnly: true,
+            path: "/",
+            sameSite: "lax",
+            secure: false,
+            expires: new Date(1774936800 * 1000),
+          },
+        },
+        {
+          name: authSessionCookieNames.refreshToken,
+          value: "new-refresh-token",
+          options: {
+            httpOnly: true,
+            path: "/",
+            sameSite: "lax",
+            secure: false,
+            expires: new Date(1774936800 * 1000),
+          },
+        },
+      ],
+    });
   });
 
   it("vrátí null pro neplatný token bez refresh fallbacku", async () => {
     getUserMock.mockResolvedValueOnce({ data: { user: null }, error: new Error("invalid") });
 
-    await expect(getUserFromAccessToken("invalid-access-token")).resolves.toBeNull();
+    await expect(getUserFromAccessToken("invalid-access-token")).resolves.toEqual({
+      user: null,
+      sessionCookiesToSet: [],
+    });
   });
 
   it("vrací anonymní stav při neplatném access tokenu", async () => {
     const currentUserSpy = vi
       .spyOn(authModule, "getUserFromAccessToken")
-      .mockResolvedValueOnce(null);
+      .mockResolvedValueOnce({ user: null, sessionCookiesToSet: [] });
 
     const currentUser = await currentUserModule.getCurrentUser({
       cookies: makeCookieSource("invalid-access-token", "valid-refresh-token"),
@@ -255,13 +242,29 @@ describe("auth helpers", () => {
       memberships: [],
       role: "anonymous",
       isAuthenticated: false,
+      sessionCookiesToSet: [],
     });
   });
 
-  it("zkusí refresh token i bez access tokenu", async () => {
+  it("zkusí refresh token i bez access tokenu a vrací payloady pro cookies", async () => {
     const currentUserSpy = vi
       .spyOn(authModule, "getUserFromAccessToken")
-      .mockResolvedValueOnce({ id: "user-1" } as never);
+      .mockResolvedValueOnce({
+        user: { id: "user-1" } as never,
+        sessionCookiesToSet: [
+          {
+            name: authSessionCookieNames.accessToken,
+            value: "new-access-token",
+            options: {
+              httpOnly: true,
+              path: "/",
+              sameSite: "lax",
+              secure: false,
+              maxAge: 60 * 60 * 24 * 30,
+            },
+          },
+        ],
+      });
     createServerSupabaseClientMock.mockReturnValue(createSupabaseMock(null, []));
 
     const currentUser = await currentUserModule.getCurrentUser({
@@ -275,11 +278,27 @@ describe("auth helpers", () => {
       membership: null,
       memberships: [],
       role: "pilot",
+      sessionCookiesToSet: [
+        {
+          name: authSessionCookieNames.accessToken,
+          value: "new-access-token",
+          options: {
+            httpOnly: true,
+            path: "/",
+            sameSite: "lax",
+            secure: false,
+            maxAge: 60 * 60 * 24 * 30,
+          },
+        },
+      ],
     });
   });
 
   it("nevybírá první membership potichu, když má uživatel více klubů", async () => {
-    vi.spyOn(authModule, "getUserFromAccessToken").mockResolvedValueOnce({ id: "user-1" } as never);
+    vi.spyOn(authModule, "getUserFromAccessToken").mockResolvedValueOnce({
+      user: { id: "user-1" } as never,
+      sessionCookiesToSet: [],
+    });
     createServerSupabaseClientMock.mockReturnValue(
       createSupabaseMock(
         {

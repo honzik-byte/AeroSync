@@ -2,7 +2,12 @@ import "server-only"
 
 import { cookies } from "next/headers"
 import { createServerSupabaseClient } from "@/lib/serverSupabase"
-import { getUserFromAccessToken, readAuthSessionCookies, type AuthCookieSource } from "@/lib/auth"
+import {
+  getUserFromAccessToken,
+  readAuthSessionCookies,
+  type AuthCookieSource,
+  type AuthSessionCookie,
+} from "@/lib/auth"
 import type { AeroclubMember, Profile } from "@/types"
 import type { User } from "@supabase/supabase-js"
 
@@ -18,6 +23,7 @@ export type CurrentUser = {
   isAuthenticated: boolean
   isSuperAdmin: boolean
   isClubAdmin: boolean
+  sessionCookiesToSet: AuthSessionCookie[]
 }
 
 export type CurrentUserOptions = {
@@ -50,6 +56,7 @@ export function buildCurrentUserContext(input: {
   profile: Profile | null
   membership: AeroclubMember | null
   memberships?: AeroclubMember[]
+  sessionCookiesToSet?: AuthSessionCookie[]
 }): CurrentUser {
   const memberships = input.memberships ?? (input.membership ? [input.membership] : [])
   const role = resolveCurrentUserRole(input.authUser, input.profile, input.membership)
@@ -64,6 +71,7 @@ export function buildCurrentUserContext(input: {
     isAuthenticated: Boolean(input.authUser),
     isSuperAdmin: role === "super_admin",
     isClubAdmin: role === "club_admin",
+    sessionCookiesToSet: input.sessionCookiesToSet ?? [],
   }
 }
 
@@ -129,36 +137,39 @@ export async function getCurrentUser(options: CurrentUserOptions = {}): Promise<
       profile: null,
       membership: null,
       memberships: [],
+      sessionCookiesToSet: [],
     })
   }
 
-  const authUser = await getUserFromAccessToken(
+  const authLookup = await getUserFromAccessToken(
     sessionCookies.accessToken,
     sessionCookies.refreshToken,
   )
 
-  if (!authUser) {
+  if (!authLookup.user) {
     return buildCurrentUserContext({
       authUser: null,
       profile: null,
       membership: null,
       memberships: [],
+      sessionCookiesToSet: authLookup.sessionCookiesToSet,
     })
   }
 
   const supabase = createServerSupabaseClient()
   const [profile, memberships] = await Promise.all([
-    loadProfile(supabase, authUser.id),
-    loadMemberships(supabase, authUser.id, options.aeroclubId),
+    loadProfile(supabase, authLookup.user.id),
+    loadMemberships(supabase, authLookup.user.id, options.aeroclubId),
   ])
 
   const membership = resolveMembership(memberships, options.aeroclubId)
 
   return buildCurrentUserContext({
-    authUser,
+    authUser: authLookup.user,
     profile,
     membership,
     memberships,
+    sessionCookiesToSet: authLookup.sessionCookiesToSet,
   })
 }
 

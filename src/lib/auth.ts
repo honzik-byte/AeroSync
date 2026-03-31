@@ -13,6 +13,11 @@ export type AuthSessionCookies = {
   refreshToken?: string
 }
 
+export type AuthLookupResult = {
+  user: User | null
+  sessionCookiesToSet: AuthSessionCookie[]
+}
+
 export type AuthSessionCookie = {
   name: string
   value: string
@@ -151,26 +156,48 @@ export function createAuthClient() {
 export async function getUserFromAccessToken(
   accessToken?: string,
   refreshToken?: string,
-): Promise<User | null> {
+): Promise<AuthLookupResult> {
   const supabase = createAuthClient()
 
   if (accessToken) {
     const { data, error } = await supabase.auth.getUser(accessToken)
 
     if (!error && data.user) {
-      return data.user
+      return {
+        user: data.user,
+        sessionCookiesToSet: [],
+      }
     }
   }
 
   if (!refreshToken) {
-    return null
+    return {
+      user: null,
+      sessionCookiesToSet: [],
+    }
   }
 
   const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken })
 
   if (error) {
-    return null
+    return {
+      user: null,
+      sessionCookiesToSet: [],
+    }
   }
 
-  return data.user ?? data.session?.user ?? null
+  const session = data.session
+
+  return {
+    user: data.user ?? session?.user ?? null,
+    sessionCookiesToSet: session
+      ? createAuthSessionCookies(
+          {
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token,
+          },
+          session.expires_at ? new Date(session.expires_at * 1000) : undefined,
+        )
+      : [],
+  }
 }
