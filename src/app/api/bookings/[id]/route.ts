@@ -1,9 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveAeroclubId } from "@/lib/activeAeroclub";
+import { getCurrentUser } from "@/lib/currentUser";
 import { ensureNoBookingConflict, validateBookingWindow } from "@/lib/bookings";
+import { requireAuthenticatedUser } from "@/lib/authorization";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { bookingInputSchema } from "@/lib/validators";
 import type { Database } from "@/types";
+
+function ensureAeroclubId(aeroclubId: string | null) {
+  if (!aeroclubId) {
+    throw new Error("Nelze určit aktivní aeroklub. Zkontroluj, že máš právě jedno aktivní členství.");
+  }
+
+  return aeroclubId;
+}
+
+function resolveStatus(message: string) {
+  if (message === "Uživatel není přihlášený.") {
+    return 401;
+  }
+
+  return 400;
+}
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -11,12 +28,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const payload = bookingInputSchema.parse(await request.json());
     validateBookingWindow(payload);
 
+    const currentUser = await getCurrentUser();
+    requireAuthenticatedUser(currentUser);
+    const aeroclubId = ensureAeroclubId(currentUser.aeroclubId);
     const supabase = createServerSupabaseClient();
-    const aeroclubId = await getActiveAeroclubId();
 
     const { data: existing, error: existingError } = await supabase
       .from("bookings")
-      .select("id, start_time, end_time")
+      .select("id, start_time, end_time, status")
       .eq("aeroclub_id", aeroclubId)
       .eq("airplane_id", payload.airplane_id);
 
@@ -25,6 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     ensureNoBookingConflict(payload, existing ?? [], id);
+
     const updatePayload: Database["public"]["Tables"]["bookings"]["Update"] = {
       airplane_id: payload.airplane_id,
       pilot_id: payload.pilot_id,
@@ -45,7 +65,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Nepodařilo se upravit rezervaci.";
-    const status = message === "V tomto čase už je letadlo rezervované." ? 409 : 400;
+    const status = message === "V tomto čase už je letadlo rezervované." ? 409 : resolveStatus(message);
     return NextResponse.json({ message }, { status });
   }
 }
@@ -53,8 +73,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const currentUser = await getCurrentUser();
+    requireAuthenticatedUser(currentUser);
+    const aeroclubId = ensureAeroclubId(currentUser.aeroclubId);
     const supabase = createServerSupabaseClient();
-    const aeroclubId = await getActiveAeroclubId();
 
     const { error } = await supabase.from("bookings").delete().eq("id", id).eq("aeroclub_id", aeroclubId);
 
@@ -65,6 +87,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Nepodařilo se smazat rezervaci.";
-    return NextResponse.json({ message }, { status: 400 });
+    const status = message === "Uživatel není přihlášený." ? 401 : 400;
+    return NextResponse.json({ message }, { status });
   }
 }

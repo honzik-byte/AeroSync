@@ -1,3 +1,5 @@
+import type { BookingStatus } from "@/types";
+
 type BookingWindow = {
   start_time: string;
   end_time: string;
@@ -5,7 +7,16 @@ type BookingWindow = {
 
 type BookingWithId = BookingWindow & {
   id: string;
+  status?: BookingStatus | string | null;
 };
+
+export function bookingBlocksSlot(status: BookingStatus | string | null | undefined) {
+  if (status == null) {
+    return true;
+  }
+
+  return status === "pending" || status === "approved";
+}
 
 export function validateBookingWindow(window: BookingWindow) {
   const start = new Date(window.start_time).getTime();
@@ -36,6 +47,10 @@ export function ensureNoBookingConflict(
 ) {
   const hasConflict = existing.some((item) => {
     if (ignoredBookingId && item.id === ignoredBookingId) {
+      return false;
+    }
+
+    if (!bookingBlocksSlot(item.status)) {
       return false;
     }
 

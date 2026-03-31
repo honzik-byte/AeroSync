@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { bookingOverlaps, ensureNoBookingConflict, validateBookingWindow } from "@/lib/bookings";
+import {
+  bookingBlocksSlot,
+  bookingOverlaps,
+  ensureNoBookingConflict,
+  validateBookingWindow,
+} from "@/lib/bookings";
 
 describe("validateBookingWindow", () => {
   it("odmítne konec rezervace před začátkem", () => {
@@ -65,6 +70,16 @@ describe("bookingOverlaps", () => {
         },
       ),
     ).toBe(false);
+  });
+});
+
+describe("bookingBlocksSlot", () => {
+  it("blokuje pending rezervaci", () => {
+    expect(bookingBlocksSlot("pending")).toBe(true);
+  });
+
+  it("neblokuje rejected rezervaci", () => {
+    expect(bookingBlocksSlot("rejected")).toBe(false);
   });
 });
 
