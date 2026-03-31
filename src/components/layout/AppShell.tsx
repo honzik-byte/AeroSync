@@ -1,12 +1,33 @@
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { getCurrentUser } from "@/lib/currentUser";
 
 type AppShellProps = {
   children: ReactNode;
 };
 
-export function AppShell({ children }: AppShellProps) {
+const authRoutes = new Set(["/login", "/register"]);
+
+export async function AppShell({ children }: AppShellProps) {
+  const pathname = (await headers()).get("x-pathname") ?? "/";
+  const isAuthRoute = authRoutes.has(pathname);
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser.isAuthenticated && !isAuthRoute) {
+    redirect("/login");
+  }
+
+  if (currentUser.isAuthenticated && isAuthRoute) {
+    redirect("/dashboard");
+  }
+
+  if (isAuthRoute) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 lg:flex">
       <Sidebar />
