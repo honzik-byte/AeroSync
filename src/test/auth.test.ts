@@ -1,4 +1,10 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { activeBookingStatuses } from "@/lib/bookingStatus";
+import {
+  getNavigationItemsForRole,
+  isClubAdminRole,
+  isSuperAdminRole,
+} from "@/lib/authorization";
 import type { AeroclubMember, Booking, BookingStatus, Database } from "@/types";
 
 describe("AeroclubMember type", () => {
@@ -46,5 +52,41 @@ describe("Booking schema types", () => {
   it("má vyplněné relationships pro změněný scope", () => {
     expectTypeOf<Database["public"]["Tables"]["profiles"]["Relationships"]>().not.toEqualTypeOf<[]>();
     expectTypeOf<Database["public"]["Tables"]["bookings"]["Relationships"]>().not.toEqualTypeOf<[]>();
+  });
+});
+
+describe("bookingStatus helpers", () => {
+  it("definuje active booking statuses pro pending a approved", () => {
+    expect(activeBookingStatuses).toEqual(["pending", "approved"]);
+    expectTypeOf<typeof activeBookingStatuses>().toEqualTypeOf<readonly ["pending", "approved"]>();
+  });
+});
+
+describe("authorization helpers", () => {
+  it("rozlišuje super admin a klubového admina", () => {
+    expect(isSuperAdminRole("super_admin")).toBe(true);
+    expect(isSuperAdminRole("user")).toBe(false);
+    expect(isClubAdminRole("club_admin")).toBe(true);
+    expect(isClubAdminRole("pilot")).toBe(false);
+  });
+
+  it("vrací navigaci pro super admina i klubového admina", () => {
+    expect(getNavigationItemsForRole("super_admin").map((item) => item.href)).toEqual([
+      "/dashboard",
+      "/calendar",
+      "/airplanes",
+      "/pilots",
+      "/admin",
+    ]);
+    expect(getNavigationItemsForRole("club_admin").map((item) => item.href)).toEqual([
+      "/dashboard",
+      "/calendar",
+      "/airplanes",
+      "/pilots",
+    ]);
+    expect(getNavigationItemsForRole("pilot").map((item) => item.href)).toEqual([
+      "/dashboard",
+      "/calendar",
+    ]);
   });
 });
