@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { render, screen } from "@testing-library/react";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { getActiveAeroclubSlug } from "@/lib/config";
 import { formatTimeLabel } from "@/lib/dates";
 
@@ -39,5 +42,16 @@ describe("getActiveAeroclubSlug", () => {
         process.env.ACTIVE_AEROCLUB_SLUG = originalValue;
       }
     }
+  });
+});
+
+describe("Sidebar", () => {
+  it("zobrazuje české položky navigace", () => {
+    render(createElement(Sidebar));
+
+    expect(screen.getByText("Přehled")).toBeInTheDocument();
+    expect(screen.getByText("Kalendář")).toBeInTheDocument();
+    expect(screen.getByText("Letadla")).toBeInTheDocument();
+    expect(screen.getByText("Piloti")).toBeInTheDocument();
   });
 });
