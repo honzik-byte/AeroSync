@@ -69,6 +69,7 @@ export function InviteCodesClient({ clubName, inviteCodes }: InviteCodesClientPr
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [createdCode, setCreatedCode] = useState<string>();
+  const [isCreatingInviteCode, setIsCreatingInviteCode] = useState(false);
   const activeUnusedCodes = useMemo(
     () =>
       inviteCodes.filter(
@@ -91,6 +92,12 @@ export function InviteCodesClient({ clubName, inviteCodes }: InviteCodesClientPr
   );
 
   async function generateNewInviteCode() {
+    if (isCreatingInviteCode) {
+      return;
+    }
+
+    setIsCreatingInviteCode(true);
+
     try {
       const response = await fetch("/api/club/invites", {
         method: "POST",
@@ -114,6 +121,8 @@ export function InviteCodesClient({ clubName, inviteCodes }: InviteCodesClientPr
       router.refresh();
     } catch {
       setErrorMessage("Nepodařilo se vytvořit pozvánkový kód. Zkus to prosím znovu.");
+    } finally {
+      setIsCreatingInviteCode(false);
     }
   }
 
@@ -129,7 +138,14 @@ export function InviteCodesClient({ clubName, inviteCodes }: InviteCodesClientPr
         </p>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button onClick={generateNewInviteCode}>Vygenerovat nový kód</Button>
+          <Button
+            onClick={generateNewInviteCode}
+            disabled={isCreatingInviteCode}
+            aria-busy={isCreatingInviteCode}
+            className="disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isCreatingInviteCode ? "Vytvářím kód..." : "Vygenerovat nový kód"}
+          </Button>
           <div className="text-sm text-slate-500">
             Aktivních nepoužitých kódů:{" "}
             <span className="font-semibold text-slate-900">{activeUnusedCodes.length}</span>

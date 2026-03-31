@@ -27,6 +27,10 @@ function resolveStatus(message: string) {
     return 404;
   }
 
+  if (message === "Nelze zrušit posledního aktivního klubového admina.") {
+    return 409;
+  }
+
   return 400;
 }
 
@@ -36,6 +40,42 @@ function ensureClubId(currentUser: Awaited<ReturnType<typeof getCurrentUser>>) {
   }
 
   return currentUser.aeroclubId;
+}
+
+async function ensureUpdateDoesNotLockOutLastClubAdmin(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  aeroclubId: string,
+  memberId: string,
+  existingMember: { role: "club_admin" | "pilot"; status: "active" | "inactive" },
+  payload: z.infer<typeof memberUpdateSchema>,
+) {
+  const nextRole = payload.role ?? existingMember.role;
+  const nextStatus = payload.status ?? existingMember.status;
+  const wouldRemainActiveAdmin = nextRole === "club_admin" && nextStatus === "active";
+
+  if (
+    existingMember.role !== "club_admin" ||
+    existingMember.status !== "active" ||
+    wouldRemainActiveAdmin
+  ) {
+    return;
+  }
+
+  const { data: otherActiveAdmins, error } = await supabase
+    .from("aeroclub_members")
+    .select("id")
+    .eq("aeroclub_id", aeroclubId)
+    .eq("role", "club_admin")
+    .eq("status", "active")
+    .neq("id", memberId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if ((otherActiveAdmins ?? []).length === 0) {
+    throw new Error("Nelze zrušit posledního aktivního klubového admina.");
+  }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -49,7 +89,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const { data: existingMember, error: fetchError } = await supabase
       .from("aeroclub_members")
-      .select("id, aeroclub_id")
+      .select("id, aeroclub_id, role, status")
       .eq("id", id)
       .eq("aeroclub_id", aeroclubId)
       .maybeSingle();
@@ -61,6 +101,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!existingMember) {
       throw new Error("Člen nenalezený.");
     }
+
+    await ensureUpdateDoesNotLockOutLastClubAdmin(
+      supabase,
+      aeroclubId,
+      id,
+      {
+        role: existingMember.role,
+        status: existingMember.status,
+      },
+      payload,
+    );
 
     const updatePayload: Database["public"]["Tables"]["aeroclub_members"]["Update"] = {};
 
