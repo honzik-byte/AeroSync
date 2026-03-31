@@ -3,12 +3,21 @@ import {
   consumeInviteCodeIfAvailable,
   ensureInviteCodeIsUsable,
 } from "@/lib/inviteCodes";
+import { generateInviteCode } from "@/app/api/club/invites/route";
 
 const { createServerSupabaseClientMock } = vi.hoisted(() => {
   return {
     createServerSupabaseClientMock: vi.fn(),
   };
 });
+
+vi.mock("@/lib/currentUser", () => ({
+  getCurrentUser: vi.fn(),
+}));
+
+vi.mock("@/lib/authorization", () => ({
+  requireClubAdmin: vi.fn((currentUser) => currentUser),
+}));
 
 vi.mock("@/lib/serverSupabase", () => ({
   createServerSupabaseClient: createServerSupabaseClientMock,
@@ -79,5 +88,12 @@ describe("inviteCodes", () => {
     await expect(ensureInviteCodeIsUsable("AERO-123")).rejects.toThrow(
       "Pozvánkový kód už byl použit.",
     );
+  });
+
+  it("generuje dostatečně dlouhý pozvánkový kód", () => {
+    const code = generateInviteCode();
+
+    expect(code).toMatch(/^AERO-/);
+    expect(code.length).toBeGreaterThanOrEqual(16);
   });
 });
