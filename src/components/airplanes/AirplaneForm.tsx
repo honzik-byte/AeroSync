@@ -3,17 +3,32 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 
-type AirplaneFormProps = {
-  onSuccess: () => void;
+export type AirplaneFormValues = {
+  name: string;
+  type: string;
 };
 
-export function AirplaneForm({ onSuccess }: AirplaneFormProps) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState("");
+type AirplaneFormProps = {
+  initialValues?: AirplaneFormValues;
+  submitLabel?: string;
+  onSubmit: (values: AirplaneFormValues) => Promise<void> | void;
+  onCancel: () => void;
+  errorMessage?: string;
+};
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+export function AirplaneForm({
+  initialValues = { name: "", type: "" },
+  submitLabel = "Uložit letadlo",
+  onSubmit,
+  onCancel,
+  errorMessage,
+}: AirplaneFormProps) {
+  const [name, setName] = useState(initialValues.name);
+  const [type, setType] = useState(initialValues.type);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSuccess();
+    await onSubmit({ name, type });
   }
 
   return (
@@ -44,7 +59,18 @@ export function AirplaneForm({ onSuccess }: AirplaneFormProps) {
         />
       </div>
 
-      <Button type="submit">Uložit letadlo</Button>
+      {errorMessage ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <div className="flex gap-2">
+        <Button type="submit">{submitLabel}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Zrušit
+        </Button>
+      </div>
     </form>
   );
 }

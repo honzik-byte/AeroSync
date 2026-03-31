@@ -3,17 +3,32 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 
-type PilotFormProps = {
-  onSuccess: () => void;
+export type PilotFormValues = {
+  name: string;
+  email: string;
 };
 
-export function PilotForm({ onSuccess }: PilotFormProps) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+type PilotFormProps = {
+  initialValues?: PilotFormValues;
+  submitLabel?: string;
+  onSubmit: (values: PilotFormValues) => Promise<void> | void;
+  onCancel: () => void;
+  errorMessage?: string;
+};
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+export function PilotForm({
+  initialValues = { name: "", email: "" },
+  submitLabel = "Uložit pilota",
+  onSubmit,
+  onCancel,
+  errorMessage,
+}: PilotFormProps) {
+  const [name, setName] = useState(initialValues.name);
+  const [email, setEmail] = useState(initialValues.email);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSuccess();
+    await onSubmit({ name, email });
   }
 
   return (
@@ -45,7 +60,18 @@ export function PilotForm({ onSuccess }: PilotFormProps) {
         />
       </div>
 
-      <Button type="submit">Uložit pilota</Button>
+      {errorMessage ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <div className="flex gap-2">
+        <Button type="submit">{submitLabel}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Zrušit
+        </Button>
+      </div>
     </form>
   );
 }

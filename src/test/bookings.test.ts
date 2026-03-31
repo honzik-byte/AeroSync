@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingOverlaps, validateBookingWindow } from "@/lib/bookings";
+import { bookingOverlaps, ensureNoBookingConflict, validateBookingWindow } from "@/lib/bookings";
 
 describe("validateBookingWindow", () => {
   it("odmítne konec rezervace před začátkem", () => {
@@ -65,5 +65,44 @@ describe("bookingOverlaps", () => {
         },
       ),
     ).toBe(false);
+  });
+});
+
+describe("ensureNoBookingConflict", () => {
+  it("odmítne konflikt rezervace se srozumitelnou chybou", () => {
+    expect(() =>
+      ensureNoBookingConflict(
+        {
+          start_time: "2026-03-31T10:15:00.000Z",
+          end_time: "2026-03-31T11:15:00.000Z",
+        },
+        [
+          {
+            id: "1",
+            start_time: "2026-03-31T10:00:00.000Z",
+            end_time: "2026-03-31T11:00:00.000Z",
+          },
+        ],
+      ),
+    ).toThrow("V tomto čase už je letadlo rezervované.");
+  });
+
+  it("ignoruje právě upravovanou rezervaci", () => {
+    expect(() =>
+      ensureNoBookingConflict(
+        {
+          start_time: "2026-03-31T10:00:00.000Z",
+          end_time: "2026-03-31T11:00:00.000Z",
+        },
+        [
+          {
+            id: "1",
+            start_time: "2026-03-31T10:00:00.000Z",
+            end_time: "2026-03-31T11:00:00.000Z",
+          },
+        ],
+        "1",
+      ),
+    ).not.toThrow();
   });
 });

@@ -3,6 +3,10 @@ type BookingWindow = {
   end_time: string;
 };
 
+type BookingWithId = BookingWindow & {
+  id: string;
+};
+
 export function validateBookingWindow(window: BookingWindow) {
   const start = new Date(window.start_time).getTime();
   const end = new Date(window.end_time).getTime();
@@ -23,4 +27,22 @@ export function bookingOverlaps(a: BookingWindow, b: BookingWindow) {
   const bEnd = new Date(b.end_time).getTime();
 
   return aStart < bEnd && aEnd > bStart;
+}
+
+export function ensureNoBookingConflict(
+  candidate: BookingWindow,
+  existing: BookingWithId[],
+  ignoredBookingId?: string,
+) {
+  const hasConflict = existing.some((item) => {
+    if (ignoredBookingId && item.id === ignoredBookingId) {
+      return false;
+    }
+
+    return bookingOverlaps(candidate, item);
+  });
+
+  if (hasConflict) {
+    throw new Error("V tomto čase už je letadlo rezervované.");
+  }
 }

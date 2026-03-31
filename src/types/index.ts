@@ -48,6 +48,7 @@ export type Database = {
           name?: string
           created_at?: string
         }
+        Relationships: []
       }
       airplanes: {
         Row: Airplane
@@ -65,6 +66,7 @@ export type Database = {
           type?: string
           created_at?: string
         }
+        Relationships: []
       }
       pilots: {
         Row: Pilot
@@ -82,6 +84,7 @@ export type Database = {
           email?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       bookings: {
         Row: Booking
@@ -103,7 +106,12 @@ export type Database = {
           end_time?: string
           created_at?: string
         }
+        Relationships: []
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }

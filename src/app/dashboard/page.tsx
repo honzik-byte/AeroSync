@@ -1,18 +1,63 @@
+import { getActiveAeroclubId } from "@/lib/activeAeroclub";
+import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { DashboardCards } from "@/components/dashboard/DashboardCards";
 import { TodayBookings } from "@/components/dashboard/TodayBookings";
 import { Button } from "@/components/ui/Button";
 
-const sampleBookings = [
-  {
-    id: "demo-booking-1",
-    pilotName: "Jan Novák",
-    airplaneName: "OK-ABC",
-    startLabel: "10:00",
-    endLabel: "11:30",
-  },
-];
+export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+function getTodayInPrague() {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Prague",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+export default async function DashboardPage() {
+  const supabase = createServerSupabaseClient();
+  const aeroclubId = await getActiveAeroclubId();
+  const today = getTodayInPrague();
+  const todayStart = `${today}T00:00:00.000+02:00`;
+  const todayEnd = `${today}T23:59:59.999+02:00`;
+
+  const [{ count: airplanesCount }, { count: pilotsCount }, { data: airplanes }, { data: pilots }, { data: bookings }] = await Promise.all([
+    supabase.from("airplanes").select("*", { count: "exact", head: true }).eq("aeroclub_id", aeroclubId),
+    supabase.from("pilots").select("*", { count: "exact", head: true }).eq("aeroclub_id", aeroclubId),
+    supabase.from("airplanes").select("id, name").eq("aeroclub_id", aeroclubId),
+    supabase.from("pilots").select("id, name").eq("aeroclub_id", aeroclubId),
+    supabase
+      .from("bookings")
+      .select("id, airplane_id, pilot_id, start_time, end_time")
+      .eq("aeroclub_id", aeroclubId)
+      .gte("start_time", todayStart)
+      .lte("start_time", todayEnd)
+      .order("start_time"),
+  ]);
+
+  const airplaneMap = new Map((airplanes ?? []).map((airplane) => [airplane.id, airplane.name]));
+  const pilotMap = new Map((pilots ?? []).map((pilot) => [pilot.id, pilot.name]));
+
+  const todayBookings =
+    bookings?.map((booking) => ({
+      id: booking.id,
+      pilotName: pilotMap.get(booking.pilot_id) ?? "Neznámý pilot",
+      airplaneName: airplaneMap.get(booking.airplane_id) ?? "Neznámé letadlo",
+      startLabel: new Intl.DateTimeFormat("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Europe/Prague",
+      }).format(new Date(booking.start_time)),
+      endLabel: new Intl.DateTimeFormat("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Europe/Prague",
+      }).format(new Date(booking.end_time)),
+    })) ?? [];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -28,8 +73,12 @@ export default function DashboardPage() {
         <Button>Nová rezervace</Button>
       </div>
 
-      <DashboardCards airplanesCount={2} pilotsCount={3} todayBookingsCount={1} />
-      <TodayBookings bookings={sampleBookings} />
+      <DashboardCards
+        airplanesCount={airplanesCount ?? 0}
+        pilotsCount={pilotsCount ?? 0}
+        todayBookingsCount={todayBookings.length}
+      />
+      <TodayBookings bookings={todayBookings} />
     </div>
   );
 }
