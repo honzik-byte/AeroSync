@@ -11,6 +11,7 @@ import {
   isClubAdminRole,
   isSuperAdminRole,
   requireClubAdmin,
+  requireSuperAdmin,
 } from "@/lib/authorization";
 import { activeBookingStatuses } from "@/lib/bookingStatus";
 import type { CurrentUser } from "@/lib/currentUser";
@@ -155,6 +156,13 @@ describe("authorization helpers", () => {
     expect(isSuperAdminRole("pilot")).toBe(false);
     expect(isClubAdminRole("club_admin")).toBe(true);
     expect(isClubAdminRole("pilot")).toBe(false);
+  });
+
+  it("requireSuperAdmin pustí jen super admina", () => {
+    expect(requireSuperAdmin(makeCurrentUser("super_admin"))).toMatchObject({
+      role: "super_admin",
+      isSuperAdmin: true,
+    });
   });
 
   it("requireClubAdmin nepouští super admina", () => {
