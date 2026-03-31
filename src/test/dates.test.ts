@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { AirplaneForm } from "@/components/airplanes/AirplaneForm";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getActiveAeroclubSlug } from "@/lib/config";
-import { formatTimeLabel } from "@/lib/dates";
+import { buildTimeSlots, formatTimeLabel } from "@/lib/dates";
 
 describe("formatTimeLabel", () => {
   it("formátuje čas do českého času pro Prahu", () => {
@@ -64,5 +64,11 @@ describe("AirplaneForm", () => {
     expect(screen.getByLabelText("Imatrikulace")).toBeInTheDocument();
     expect(screen.getByLabelText("Typ letadla")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Uložit letadlo" })).toBeInTheDocument();
+  });
+});
+
+describe("buildTimeSlots", () => {
+  it("vytváří sloty po 15 minutách", () => {
+    expect(buildTimeSlots(8, 9)).toEqual(["08:00", "08:15", "08:30", "08:45"]);
   });
 });
