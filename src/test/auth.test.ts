@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   authSessionCookieNames,
+  applyAuthSessionCookies,
+  createAuthSessionCookies,
   getUserFromAccessToken,
 } from "@/lib/auth";
 import * as authModule from "@/lib/auth";
@@ -222,6 +224,34 @@ describe("auth helpers", () => {
       user: null,
       sessionCookiesToSet: [],
     });
+  });
+
+  it("aplikuje session cookies do cookie targetu", () => {
+    const target = {
+      set: vi.fn(),
+    };
+    const cookies = createAuthSessionCookies({
+      accessToken: "new-access-token",
+      refreshToken: "new-refresh-token",
+    });
+    const [accessCookie, refreshCookie] = cookies;
+
+    const returnedTarget = applyAuthSessionCookies(target, cookies);
+
+    expect(returnedTarget).toBe(target);
+    expect(target.set).toHaveBeenCalledTimes(2);
+    expect(target.set).toHaveBeenNthCalledWith(
+      1,
+      authSessionCookieNames.accessToken,
+      "new-access-token",
+      accessCookie?.options,
+    );
+    expect(target.set).toHaveBeenNthCalledWith(
+      2,
+      authSessionCookieNames.refreshToken,
+      "new-refresh-token",
+      refreshCookie?.options,
+    );
   });
 
   it("vrací anonymní stav při neplatném access tokenu", async () => {

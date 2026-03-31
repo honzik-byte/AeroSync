@@ -31,6 +31,10 @@ export type AuthSessionCookie = {
   }
 }
 
+export type AuthSessionCookieTarget = {
+  set(name: string, value: string, options: AuthSessionCookie["options"]): void
+}
+
 type CookieValue = { value: string } | string | null | undefined
 export type AuthCookieSource = string | { get(name: string): CookieValue } | null | undefined
 
@@ -128,6 +132,17 @@ export function createAuthSessionCookies(
       },
     ]
   })
+}
+
+export function applyAuthSessionCookies(
+  target: AuthSessionCookieTarget,
+  cookies: AuthSessionCookie[],
+) {
+  cookies.forEach((cookie) => {
+    target.set(cookie.name, cookie.value, cookie.options)
+  })
+
+  return target
 }
 
 export function clearAuthSessionCookies(): AuthSessionCookie[] {
