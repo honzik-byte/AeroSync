@@ -3,8 +3,8 @@ import { z } from "zod"
 import { createAuthClient, createAuthSessionCookies, applyAuthSessionCookies } from "@/lib/auth"
 import { createServerSupabaseClient } from "@/lib/serverSupabase"
 import {
+  consumeInviteCodeIfAvailable,
   ensureInviteCodeIsUsable,
-  markInviteCodeAsUsed,
   releaseInviteCodeUsage,
 } from "@/lib/inviteCodes"
 import type { Database } from "@/types"
@@ -59,10 +59,7 @@ export async function POST(request: NextRequest) {
       status: "active",
     }
 
-    const [profileResult, memberResult] = await Promise.all([
-      supabase.from("profiles").insert(profilePayload),
-      supabase.from("aeroclub_members").insert(memberPayload),
-    ])
+    const profileResult = await supabase.from("profiles").insert(profilePayload)
 
     if (profileResult.error) {
       throw new Error(profileResult.error.message)
@@ -70,13 +67,15 @@ export async function POST(request: NextRequest) {
 
     profileCreated = true
 
+    const memberResult = await supabase.from("aeroclub_members").insert(memberPayload)
+
     if (memberResult.error) {
       throw new Error(memberResult.error.message)
     }
 
     memberCreated = true
 
-    await markInviteCodeAsUsed(inviteCode.id, createdUser.user.id, supabase)
+    await consumeInviteCodeIfAvailable(inviteCode.id, createdUser.user.id, supabase)
     inviteMarkedUsed = true
 
     const signInResult = await auth.auth.signInWithPassword({
@@ -129,7 +128,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (createdUserId) {
-      await auth.auth.admin.deleteUser(createdUserId)
+      try {
+        await auth.auth.admin.deleteUser(createdUserId)
+      } catch {
+        // Best effort rollback only.
+      }
     }
 
     const message = error instanceof Error ? error.message : "Registrace se nezdařila."

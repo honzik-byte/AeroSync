@@ -55,7 +55,7 @@ export async function ensureInviteCodeIsUsable(
   return inviteCode
 }
 
-export async function markInviteCodeAsUsed(
+export async function consumeInviteCodeIfAvailable(
   inviteCodeId: string,
   usedByUserId: string,
   supabase: InviteCodeClient = createServerSupabaseClient(),
@@ -65,14 +65,33 @@ export async function markInviteCodeAsUsed(
     used_at: new Date().toISOString(),
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("aeroclub_invite_codes")
     .update(updatePayload)
     .eq("id", inviteCodeId)
+    .eq("is_active", true)
+    .is("used_at", null)
+    .is("used_by_user_id", null)
+    .select("*")
+    .maybeSingle()
 
   if (error) {
     throw new Error("Pozvánkový kód se nepodařilo označit jako použitý.")
   }
+
+  if (!data) {
+    throw new Error("Pozvánkový kód už byl mezitím použit.")
+  }
+
+  return data
+}
+
+export async function markInviteCodeAsUsed(
+  inviteCodeId: string,
+  usedByUserId: string,
+  supabase: InviteCodeClient = createServerSupabaseClient(),
+) {
+  await consumeInviteCodeIfAvailable(inviteCodeId, usedByUserId, supabase)
 }
 
 export async function releaseInviteCodeUsage(

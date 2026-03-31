@@ -45,7 +45,6 @@ export function RegisterForm() {
         throw new Error(payload.message ?? "Registrace se nezdařila.")
       }
 
-      router.refresh()
       router.push("/dashboard")
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Registrace se nezdařila.")

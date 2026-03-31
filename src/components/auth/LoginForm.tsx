@@ -41,7 +41,6 @@ export function LoginForm() {
         throw new Error(payload.message ?? "Přihlášení se nezdařilo.")
       }
 
-      router.refresh()
       router.push("/dashboard")
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Přihlášení se nezdařilo.")
