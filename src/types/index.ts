@@ -100,7 +100,14 @@ export type Database = {
           global_role?: "super_admin" | "user"
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            referencedRelation: "auth.users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       airplanes: {
         Row: Airplane
@@ -118,7 +125,14 @@ export type Database = {
           type?: string
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "airplanes_aeroclub_id_fkey"
+            columns: ["aeroclub_id"]
+            referencedRelation: "aeroclubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pilots: {
         Row: Pilot
@@ -136,7 +150,14 @@ export type Database = {
           email?: string | null
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pilots_aeroclub_id_fkey"
+            columns: ["aeroclub_id"]
+            referencedRelation: "aeroclubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aeroclub_members: {
         Row: AeroclubMember
@@ -156,7 +177,20 @@ export type Database = {
           status?: "active" | "inactive"
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "aeroclub_members_aeroclub_id_fkey"
+            columns: ["aeroclub_id"]
+            referencedRelation: "aeroclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aeroclub_members_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aeroclub_invite_codes: {
         Row: AeroclubInviteCode
@@ -178,7 +212,20 @@ export type Database = {
           used_at?: string | null
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "aeroclub_invite_codes_aeroclub_id_fkey"
+            columns: ["aeroclub_id"]
+            referencedRelation: "aeroclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aeroclub_invite_codes_used_by_user_id_fkey"
+            columns: ["used_by_user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bookings: {
         Row: Booking
@@ -210,7 +257,38 @@ export type Database = {
           rejection_reason?: string | null
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookings_aeroclub_id_fkey"
+            columns: ["aeroclub_id"]
+            referencedRelation: "aeroclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_airplane_aeroclub_fk"
+            columns: ["airplane_id", "aeroclub_id"]
+            referencedRelation: "airplanes"
+            referencedColumns: ["id", "aeroclub_id"]
+          },
+          {
+            foreignKeyName: "bookings_pilot_aeroclub_fk"
+            columns: ["pilot_id", "aeroclub_id"]
+            referencedRelation: "pilots"
+            referencedColumns: ["id", "aeroclub_id"]
+          },
+          {
+            foreignKeyName: "bookings_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_approved_by_user_id_fkey"
+            columns: ["approved_by_user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: Record<string, never>

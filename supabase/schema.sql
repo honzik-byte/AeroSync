@@ -13,6 +13,7 @@ create table if not exists profiles (
   full_name text not null,
   global_role text not null default 'user',
   created_at timestamptz not null default now(),
+  constraint profiles_id_fkey foreign key (id) references auth.users(id) on delete cascade,
   constraint profiles_global_role_check check (global_role in ('super_admin', 'user'))
 );
 
