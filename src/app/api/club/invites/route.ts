@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/currentUser";
 import { requireClubAdmin } from "@/lib/authorization";
+import { generateInviteCode } from "@/lib/inviteCodes";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import type { Database } from "@/types";
 
 const MAX_INVITE_CODE_ATTEMPTS = 5;
-
-export function generateInviteCode() {
-  return `AERO-${globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase()}`;
-}
 
 type InviteCodeInsertError = {
   code?: string;

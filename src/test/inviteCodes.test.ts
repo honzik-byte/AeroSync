@@ -3,8 +3,9 @@ import { getCurrentUser } from "@/lib/currentUser";
 import {
   consumeInviteCodeIfAvailable,
   ensureInviteCodeIsUsable,
+  generateInviteCode,
 } from "@/lib/inviteCodes";
-import { POST, generateInviteCode } from "@/app/api/club/invites/route";
+import { POST } from "@/app/api/club/invites/route";
 
 const { createServerSupabaseClientMock } = vi.hoisted(() => {
   return {

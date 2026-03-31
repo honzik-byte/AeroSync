@@ -5,6 +5,10 @@ import { createServerSupabaseClient } from "@/lib/serverSupabase"
 
 type InviteCodeClient = ReturnType<typeof createServerSupabaseClient>
 
+export function generateInviteCode() {
+  return `AERO-${globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase()}`
+}
+
 function normalizeInviteCode(code: string) {
   return code.trim().toUpperCase()
 }
