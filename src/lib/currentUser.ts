@@ -129,7 +129,8 @@ async function loadProfile(supabase: ReturnType<typeof createServerSupabaseClien
 }
 
 export async function getCurrentUser(options: CurrentUserOptions = {}): Promise<CurrentUser> {
-  const sessionCookies = readAuthSessionCookies(options.cookies ?? cookies())
+  const sessionCookieSource = options.cookies ?? (await cookies())
+  const sessionCookies = readAuthSessionCookies(sessionCookieSource)
 
   if (!sessionCookies.accessToken && !sessionCookies.refreshToken) {
     return buildCurrentUserContext({

@@ -42,7 +42,7 @@ const {
   };
 });
 
-vi.mock("server-only", () => ({}), { virtual: true });
+vi.mock("server-only", () => ({}));
 vi.mock("@supabase/supabase-js", () => ({
   createClient: createClientMock,
 }));
@@ -152,7 +152,7 @@ describe("bookingStatus helpers", () => {
 describe("authorization helpers", () => {
   it("rozlišuje super admin a klubového admina", () => {
     expect(isSuperAdminRole("super_admin")).toBe(true);
-    expect(isSuperAdminRole("user")).toBe(false);
+    expect(isSuperAdminRole("pilot")).toBe(false);
     expect(isClubAdminRole("club_admin")).toBe(true);
     expect(isClubAdminRole("pilot")).toBe(false);
   });
