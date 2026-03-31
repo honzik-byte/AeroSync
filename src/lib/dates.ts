@@ -3,6 +3,6 @@ export function formatTimeLabel(date: Date) {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "UTC"
+    timeZone: "Europe/Prague"
   }).format(date);
 }
