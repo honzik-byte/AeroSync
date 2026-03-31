@@ -1,4 +1,10 @@
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import { createElement } from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { AeroclubForm } from "@/components/admin/AeroclubForm";
+import { AeroclubsPageClient } from "@/components/admin/AeroclubsPageClient";
+import { AeroclubDetailClient } from "@/components/admin/AeroclubDetailClient";
 import {
   authSessionCookieNames,
   applyAuthSessionCookies,
@@ -46,6 +52,10 @@ const {
 vi.mock("server-only", () => ({}));
 vi.mock("@supabase/supabase-js", () => ({
   createClient: createClientMock,
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 vi.mock("@/lib/serverSupabase", () => ({
@@ -141,6 +151,96 @@ beforeEach(() => {
   createServerSupabaseClientMock.mockReset();
   createClientMock.mockClear();
   nextHeadersCookiesMock.mockClear();
+  vi.stubGlobal("fetch", vi.fn());
+});
+
+describe("AeroclubForm", () => {
+  it("přepíše hodnoty při změně initialValues", () => {
+    const { rerender } = render(
+      createElement(AeroclubForm, {
+        initialValues: { name: "Aeroklub A", slug: "aeroklub-a" },
+        onSubmit: async () => undefined,
+        onCancel: () => undefined,
+      }),
+    );
+
+    expect((screen.getByLabelText("Název klubu") as HTMLInputElement).value).toBe("Aeroklub A");
+    expect((screen.getByLabelText("Slug klubu") as HTMLInputElement).value).toBe("aeroklub-a");
+
+    rerender(
+      createElement(AeroclubForm, {
+        initialValues: { name: "Aeroklub B", slug: "aeroklub-b" },
+        onSubmit: async () => undefined,
+        onCancel: () => undefined,
+      }),
+    );
+
+    expect((screen.getByLabelText("Název klubu") as HTMLInputElement).value).toBe("Aeroklub B");
+    expect((screen.getByLabelText("Slug klubu") as HTMLInputElement).value).toBe("aeroklub-b");
+  });
+});
+
+describe("AeroclubsPageClient", () => {
+  it("zobrazí českou chybu při ne-JSON odpovědi", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      json: vi.fn().mockRejectedValue(new SyntaxError("Unexpected token")),
+    } as never);
+
+    render(
+      createElement(AeroclubsPageClient, {
+        aeroclubs: [
+          {
+            id: "club-1",
+            name: "Aeroklub Brno",
+            slug: "aeroklub-brno",
+            created_at: "2026-03-31T08:15:00.000Z",
+          },
+        ],
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Přidat aeroklub" }));
+    await user.type(screen.getByLabelText("Název klubu"), "Nový klub");
+    await user.type(screen.getByLabelText("Slug klubu"), "novy-klub");
+    await user.click(screen.getByRole("button", { name: "Uložit klub" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Nepodařilo se vytvořit aeroklub. Zkus to prosím znovu.")).toBeInTheDocument(),
+    );
+  });
+});
+
+describe("AeroclubDetailClient", () => {
+  it("zobrazí českou chybu při síťové chybě", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    render(
+      createElement(AeroclubDetailClient, {
+        aeroclub: {
+          id: "club-1",
+          name: "Aeroklub Brno",
+          slug: "aeroklub-brno",
+          created_at: "2026-03-31T08:15:00.000Z",
+        },
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Upravit klub" }));
+    await user.clear(screen.getByLabelText("Název klubu"));
+    await user.clear(screen.getByLabelText("Slug klubu"));
+    await user.type(screen.getByLabelText("Název klubu"), "Aeroklub Brno 2");
+    await user.type(screen.getByLabelText("Slug klubu"), "aeroklub-brno-2");
+    await user.click(screen.getByRole("button", { name: "Uložit změny" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Nepodařilo se upravit aeroklub. Zkus to prosím znovu.")).toBeInTheDocument(),
+    );
+  });
 });
 
 describe("bookingStatus helpers", () => {

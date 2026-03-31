@@ -26,27 +26,46 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+async function readResponseMessage(response: Response, fallbackMessage: string) {
+  try {
+    const data = (await response.json()) as { message?: unknown };
+
+    if (typeof data.message === "string" && data.message.trim()) {
+      return data.message;
+    }
+  } catch {
+    // Ne-JSON odpověď nebo neplatné tělo.
+  }
+
+  return fallbackMessage;
+}
+
 export function AeroclubDetailClient({ aeroclub }: AeroclubDetailClientProps) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
 
   async function handleUpdate(values: AeroclubFormValues) {
-    const response = await fetch(`/api/admin/aeroclubs/${aeroclub.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
+    try {
+      const response = await fetch(`/api/admin/aeroclubs/${aeroclub.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
 
-    if (!response.ok) {
-      const data = (await response.json()) as { message?: string };
-      setErrorMessage(data.message ?? "Nepodařilo se upravit aeroklub.");
-      return;
+      if (!response.ok) {
+        setErrorMessage(
+          await readResponseMessage(response, "Nepodařilo se upravit aeroklub. Zkus to prosím znovu."),
+        );
+        return;
+      }
+
+      setErrorMessage(undefined);
+      setShowForm(false);
+      router.refresh();
+    } catch {
+      setErrorMessage("Nepodařilo se upravit aeroklub. Zkus to prosím znovu.");
     }
-
-    setErrorMessage(undefined);
-    setShowForm(false);
-    router.refresh();
   }
 
   return (

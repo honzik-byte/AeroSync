@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 
 export type AeroclubFormValues = {
@@ -25,6 +25,11 @@ export function AeroclubForm({
 }: AeroclubFormProps) {
   const [name, setName] = useState(initialValues.name);
   const [slug, setSlug] = useState(initialValues.slug);
+
+  useEffect(() => {
+    setName(initialValues.name);
+    setSlug(initialValues.slug);
+  }, [initialValues.name, initialValues.slug]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
