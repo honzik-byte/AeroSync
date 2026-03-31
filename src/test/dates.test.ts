@@ -59,7 +59,12 @@ describe("Sidebar", () => {
 
 describe("AirplaneForm", () => {
   it("zobrazuje formulář letadla v češtině", () => {
-    render(createElement(AirplaneForm, { onSuccess: () => undefined }));
+    render(
+      createElement(AirplaneForm, {
+        onSubmit: () => undefined,
+        onCancel: () => undefined,
+      }),
+    );
 
     expect(screen.getByLabelText("Imatrikulace")).toBeInTheDocument();
     expect(screen.getByLabelText("Typ letadla")).toBeInTheDocument();
