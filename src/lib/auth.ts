@@ -148,13 +148,29 @@ export function createAuthClient() {
   })
 }
 
-export async function getUserFromAccessToken(accessToken: string): Promise<User | null> {
+export async function getUserFromAccessToken(
+  accessToken?: string,
+  refreshToken?: string,
+): Promise<User | null> {
   const supabase = createAuthClient()
-  const { data, error } = await supabase.auth.getUser(accessToken)
 
-  if (error) {
-    throw new Error("Nepodařilo se načíst přihlášeného uživatele.")
+  if (accessToken) {
+    const { data, error } = await supabase.auth.getUser(accessToken)
+
+    if (!error && data.user) {
+      return data.user
+    }
   }
 
-  return data.user ?? null
+  if (!refreshToken) {
+    return null
+  }
+
+  const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken })
+
+  if (error) {
+    return null
+  }
+
+  return data.user ?? data.session?.user ?? null
 }

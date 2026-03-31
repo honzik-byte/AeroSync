@@ -67,6 +67,21 @@ export function buildCurrentUserContext(input: {
   }
 }
 
+function resolveMembership(
+  memberships: AeroclubMember[],
+  aeroclubId?: string,
+): AeroclubMember | null {
+  if (aeroclubId) {
+    return memberships.find((item) => item.aeroclub_id === aeroclubId) ?? null
+  }
+
+  if (memberships.length !== 1) {
+    return null
+  }
+
+  return memberships[0] ?? null
+}
+
 async function loadMemberships(
   supabase: ReturnType<typeof createServerSupabaseClient>,
   userId: string,
@@ -108,7 +123,7 @@ async function loadProfile(supabase: ReturnType<typeof createServerSupabaseClien
 export async function getCurrentUser(options: CurrentUserOptions = {}): Promise<CurrentUser> {
   const sessionCookies = readAuthSessionCookies(options.cookies ?? cookies())
 
-  if (!sessionCookies.accessToken) {
+  if (!sessionCookies.accessToken && !sessionCookies.refreshToken) {
     return buildCurrentUserContext({
       authUser: null,
       profile: null,
@@ -117,7 +132,10 @@ export async function getCurrentUser(options: CurrentUserOptions = {}): Promise<
     })
   }
 
-  const authUser = await getUserFromAccessToken(sessionCookies.accessToken)
+  const authUser = await getUserFromAccessToken(
+    sessionCookies.accessToken,
+    sessionCookies.refreshToken,
+  )
 
   if (!authUser) {
     return buildCurrentUserContext({
@@ -134,9 +152,7 @@ export async function getCurrentUser(options: CurrentUserOptions = {}): Promise<
     loadMemberships(supabase, authUser.id, options.aeroclubId),
   ])
 
-  const membership = options.aeroclubId
-    ? memberships.find((item) => item.aeroclub_id === options.aeroclubId) ?? null
-    : memberships[0] ?? null
+  const membership = resolveMembership(memberships, options.aeroclubId)
 
   return buildCurrentUserContext({
     authUser,

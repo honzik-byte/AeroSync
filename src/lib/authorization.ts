@@ -70,7 +70,7 @@ export function requireSuperAdmin(currentUser: CurrentUser | null | undefined): 
 export function requireClubAdmin(currentUser: CurrentUser | null | undefined): CurrentUser {
   const authenticatedUser = requireAuthenticatedUser(currentUser)
 
-  if (!canManageAeroclub(authenticatedUser.role)) {
+  if (!isClubAdminRole(authenticatedUser.role)) {
     throw new Error("Je potřeba role klubového admina.")
   }
 
