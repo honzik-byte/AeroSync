@@ -31,6 +31,17 @@ describe("resolveRequestPathname", () => {
     expect(pathname).toBe("/login")
   })
 
+  it("prefers next-url over matched path when both are present", () => {
+    const pathname = resolveRequestPathname(
+      createHeaders({
+        "next-url": "https://aero-sync-amber.vercel.app/dashboard",
+        "x-matched-path": "/login",
+      }),
+    )
+
+    expect(pathname).toBe("/dashboard")
+  })
+
   it("extracts pathname from next-url when only full url is available", () => {
     const pathname = resolveRequestPathname(
       createHeaders({

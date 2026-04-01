@@ -25,8 +25,8 @@ function normalizePathname(value?: string | null) {
 export function resolveRequestPathname(headers: HeaderSource) {
   return (
     normalizePathname(headers.get("x-pathname")) ??
-    normalizePathname(headers.get("x-matched-path")) ??
     normalizePathname(headers.get("next-url")) ??
+    normalizePathname(headers.get("x-matched-path")) ??
     "/"
   )
 }
