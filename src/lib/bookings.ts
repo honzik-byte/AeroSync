@@ -1,3 +1,4 @@
+import type { CurrentUser } from "@/lib/currentUser";
 import type { BookingStatus } from "@/types";
 
 type BookingWindow = {
@@ -59,5 +60,18 @@ export function ensureNoBookingConflict(
 
   if (hasConflict) {
     throw new Error("V tomto čase už je letadlo rezervované.");
+  }
+}
+
+export function ensureBookingPilotAccess(
+  currentUser: CurrentUser,
+  requestedPilotId: string,
+) {
+  if (currentUser.role !== "pilot") {
+    return;
+  }
+
+  if (!currentUser.authUser?.id || currentUser.authUser.id !== requestedPilotId) {
+    throw new Error("Pilot může vytvářet rezervace jen sám pro sebe.");
   }
 }

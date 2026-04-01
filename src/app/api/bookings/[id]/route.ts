@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/currentUser";
 import { listBookingsForConflictCheck } from "@/lib/bookingPersistence";
-import { ensureNoBookingConflict, validateBookingWindow } from "@/lib/bookings";
+import { ensureBookingPilotAccess, ensureNoBookingConflict, validateBookingWindow } from "@/lib/bookings";
 import { requireAuthenticatedUser } from "@/lib/authorization";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { bookingInputSchema } from "@/lib/validators";
@@ -30,7 +30,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     validateBookingWindow(payload);
 
     const currentUser = await getCurrentUser();
-    requireAuthenticatedUser(currentUser);
+    const authenticatedUser = requireAuthenticatedUser(currentUser);
+    ensureBookingPilotAccess(authenticatedUser, payload.pilot_id);
     const aeroclubId = ensureAeroclubId(currentUser.aeroclubId);
     const supabase = createServerSupabaseClient();
 

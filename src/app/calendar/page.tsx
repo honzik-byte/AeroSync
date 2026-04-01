@@ -1,5 +1,6 @@
 import { syncLegacyPilotsFromAccountPeople } from "@/lib/aeroclubPeople";
 import { getActiveAeroclubId } from "@/lib/activeAeroclub";
+import { getCurrentUser } from "@/lib/currentUser";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { isSupabaseSetupError } from "@/lib/setup";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
@@ -37,7 +38,8 @@ export default async function CalendarPage({
     const resolvedSearchParams = (await searchParams) ?? {};
     const date = resolveCalendarDate(resolvedSearchParams.date);
 
-    const [accountPeople, { data: airplanes }, { data: bookings }] = await Promise.all([
+    const [currentUser, accountPeople, { data: airplanes }, { data: bookings }] = await Promise.all([
+      getCurrentUser({ aeroclubId }),
       syncLegacyPilotsFromAccountPeople(supabase, aeroclubId),
       supabase.from("airplanes").select("id, name, type").eq("aeroclub_id", aeroclubId).order("name"),
       supabase
@@ -62,6 +64,8 @@ export default async function CalendarPage({
             id: person.id,
             name: person.name,
           }))}
+          currentUserRole={currentUser.role}
+          currentUserId={currentUser.authUser?.id ?? null}
           bookings={(bookings ?? []).map((booking) => ({
             id: booking.id,
             airplaneId: booking.airplane_id,

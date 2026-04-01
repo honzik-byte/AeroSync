@@ -1,10 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
+  ensureBookingPilotAccess,
   bookingBlocksSlot,
   bookingOverlaps,
   ensureNoBookingConflict,
   validateBookingWindow,
 } from "@/lib/bookings";
+import type { CurrentUser } from "@/lib/currentUser";
+
+function makeCurrentUser(role: CurrentUser["role"], authUserId = "user-1"): CurrentUser {
+  return {
+    authUser: role === "anonymous" ? null : ({ id: authUserId } as never),
+    profile: null,
+    membership: null,
+    memberships: [],
+    role,
+    aeroclubId: "club-1",
+    isAuthenticated: role !== "anonymous",
+    isSuperAdmin: role === "super_admin",
+    isClubAdmin: role === "club_admin",
+    sessionCookiesToSet: [],
+  };
+}
 
 describe("validateBookingWindow", () => {
   it("odmítne konec rezervace před začátkem", () => {
@@ -118,6 +135,26 @@ describe("ensureNoBookingConflict", () => {
         ],
         "1",
       ),
+    ).not.toThrow();
+  });
+});
+
+describe("ensureBookingPilotAccess", () => {
+  it("dovolí pilotovi vytvořit rezervaci sám pro sebe", () => {
+    expect(() =>
+      ensureBookingPilotAccess(makeCurrentUser("pilot", "pilot-1"), "pilot-1"),
+    ).not.toThrow();
+  });
+
+  it("odmítne pilota, který vytváří rezervaci za jiného člena", () => {
+    expect(() =>
+      ensureBookingPilotAccess(makeCurrentUser("pilot", "pilot-1"), "pilot-2"),
+    ).toThrow("Pilot může vytvářet rezervace jen sám pro sebe.");
+  });
+
+  it("club adminovi dovolí rezervovat za kohokoliv", () => {
+    expect(() =>
+      ensureBookingPilotAccess(makeCurrentUser("club_admin", "admin-1"), "pilot-2"),
     ).not.toThrow();
   });
 });

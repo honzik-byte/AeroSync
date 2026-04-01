@@ -27,6 +27,8 @@ type PilotOption = {
 type CalendarGridProps = {
   airplanes: AirplaneOption[];
   pilots: PilotOption[];
+  currentUserRole: "super_admin" | "club_admin" | "pilot" | "anonymous";
+  currentUserId: string | null;
   bookings: CalendarBooking[];
   date: string;
 };
@@ -34,6 +36,8 @@ type CalendarGridProps = {
 type SlotBooking = CalendarBooking & {
   start: string;
   end: string;
+  startIndex: number;
+  durationSlots: number;
 };
 
 const slotOptions = buildTimeSlots(8, 18);
@@ -57,7 +61,14 @@ function formatDateLabel(value: string) {
   }).format(new Date(`${value}T12:00:00.000Z`));
 }
 
-export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGridProps) {
+export function CalendarGrid({
+  airplanes,
+  pilots,
+  currentUserRole,
+  currentUserId,
+  bookings,
+  date,
+}: CalendarGridProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -76,23 +87,58 @@ export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGrid
     label: `${airplane.name} • ${airplane.type}`,
   }));
 
-  const pilotOptions = pilots.map((pilot) => ({
-    id: pilot.id,
-    label: pilot.name,
-  }));
+  const pilotOptions = useMemo(() => {
+    if (currentUserRole === "pilot" && currentUserId) {
+      return pilots
+        .filter((pilot) => pilot.id === currentUserId)
+        .map((pilot) => ({
+          id: pilot.id,
+          label: pilot.name,
+        }));
+    }
+
+    return pilots.map((pilot) => ({
+      id: pilot.id,
+      label: pilot.name,
+    }));
+  }, [currentUserId, currentUserRole, pilots]);
 
   const bookingsWithSlots = useMemo<SlotBooking[]>(() => {
     return bookings.map((booking) => ({
       ...booking,
       start: formatSlotFromIso(booking.start_time),
       end: formatSlotFromIso(booking.end_time),
+      startIndex: slotOptions.indexOf(formatSlotFromIso(booking.start_time)),
+      durationSlots:
+        Math.max(
+          Math.round(
+            (new Date(booking.end_time).getTime() - new Date(booking.start_time).getTime()) /
+              (15 * 60 * 1000),
+          ),
+          1,
+        ),
     }));
   }, [bookings]);
 
-  const bookingMap = useMemo(() => {
+  const bookingStartMap = useMemo(() => {
     return new Map(
-      bookingsWithSlots.map((booking) => [`${booking.airplaneId}-${booking.start}`, booking] as const),
+      bookingsWithSlots.map((booking) => [
+        `${booking.airplaneId}-${booking.startIndex}`,
+        booking,
+      ] as const),
     );
+  }, [bookingsWithSlots]);
+
+  const coveredSlotKeys = useMemo(() => {
+    const result = new Set<string>();
+
+    bookingsWithSlots.forEach((booking) => {
+      for (let index = booking.startIndex + 1; index < booking.startIndex + booking.durationSlots; index += 1) {
+        result.add(`${booking.airplaneId}-${index}`);
+      }
+    });
+
+    return result;
   }, [bookingsWithSlots]);
 
   function toIso(slot: string) {
@@ -107,12 +153,12 @@ export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGrid
     setEditingBookingId(null);
     setDraftValues({
       airplaneId,
-      pilotId: pilots[0]?.id ?? "",
+      pilotId: pilotOptions[0]?.id ?? pilots[0]?.id ?? "",
       startSlot,
       endSlot: fallbackEnd,
     });
     setIsModalOpen(true);
-  }, [pilots]);
+  }, [pilotOptions, pilots]);
 
   useEffect(() => {
     if (hasHandledNewBookingIntent.current) {
@@ -233,8 +279,10 @@ export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGrid
                 {slot}
               </div>
               {airplanes.map((airplane) => {
-                const booking = bookingMap.get(`${airplane.id}-${slot}`);
+                const slotIndex = slotOptions.indexOf(slot);
+                const booking = bookingStartMap.get(`${airplane.id}-${slotIndex}`);
                 const pilot = booking ? pilots.find((item) => item.id === booking.pilotId) : null;
+                const isCoveredSlot = coveredSlotKeys.has(`${airplane.id}-${slotIndex}`);
 
                 return (
                   <div
@@ -243,7 +291,7 @@ export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGrid
                   >
                     {booking ? (
                       <button
-                        className="w-full rounded-2xl bg-sky-100 p-3 text-left text-sm text-sky-900 shadow-sm transition hover:bg-sky-200"
+                        className="flex h-full min-h-12 w-full flex-col justify-between rounded-2xl bg-sky-100 p-3 text-left text-sm text-sky-900 shadow-sm transition hover:bg-sky-200"
                         onClick={() => openEditModal(booking)}
                       >
                         <div className="font-semibold">{pilot?.name ?? "Neznámý pilot"}</div>
@@ -251,6 +299,8 @@ export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGrid
                           {booking.start}–{booking.end}
                         </div>
                       </button>
+                    ) : isCoveredSlot ? (
+                      <div className="h-full min-h-12 rounded-2xl bg-sky-100/70" />
                     ) : (
                       <button
                         className="h-full min-h-12 w-full rounded-2xl border border-dashed border-transparent text-left text-xs text-slate-400 transition hover:border-slate-200 hover:bg-slate-50 hover:text-slate-500"

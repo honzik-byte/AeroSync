@@ -11,6 +11,8 @@ type WeeklyCalendarProps = {
     id: string;
     name: string;
   }[];
+  currentUserRole: "super_admin" | "club_admin" | "pilot" | "anonymous";
+  currentUserId: string | null;
   bookings: {
     id: string;
     airplaneId: string;
@@ -21,11 +23,25 @@ type WeeklyCalendarProps = {
   date: string;
 };
 
-export function WeeklyCalendar({ airplanes, pilots, bookings, date }: WeeklyCalendarProps) {
+export function WeeklyCalendar({
+  airplanes,
+  pilots,
+  currentUserRole,
+  currentUserId,
+  bookings,
+  date,
+}: WeeklyCalendarProps) {
   return (
     <div className="space-y-4">
       <CalendarToolbar date={date} />
-      <CalendarGrid airplanes={airplanes} pilots={pilots} bookings={bookings} date={date} />
+      <CalendarGrid
+        airplanes={airplanes}
+        pilots={pilots}
+        currentUserRole={currentUserRole}
+        currentUserId={currentUserId}
+        bookings={bookings}
+        date={date}
+      />
     </div>
   );
 }
