@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/currentUser";
+import { createBookingWithSchemaCompatibility, listBookingsForConflictCheck } from "@/lib/bookingPersistence";
 import { ensureNoBookingConflict, validateBookingWindow } from "@/lib/bookings";
 import { requireAuthenticatedUser } from "@/lib/authorization";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
@@ -32,17 +33,9 @@ export async function POST(request: NextRequest) {
     const aeroclubId = ensureAeroclubId(currentUser.aeroclubId);
     const supabase = createServerSupabaseClient();
 
-    const { data: existing, error: existingError } = await supabase
-      .from("bookings")
-      .select("id, start_time, end_time, status")
-      .eq("aeroclub_id", aeroclubId)
-      .eq("airplane_id", payload.airplane_id);
+    const existing = await listBookingsForConflictCheck(supabase, aeroclubId, payload.airplane_id);
 
-    if (existingError) {
-      throw new Error(existingError.message);
-    }
-
-    ensureNoBookingConflict(payload, existing ?? []);
+    ensureNoBookingConflict(payload, existing);
 
     const insertPayload: Database["public"]["Tables"]["bookings"]["Insert"] = {
       aeroclub_id: aeroclubId,
@@ -54,11 +47,7 @@ export async function POST(request: NextRequest) {
       requested_by_user_id: authenticatedUser.authUser?.id ?? null,
     };
 
-    const { error } = await supabase.from("bookings").insert(insertPayload);
-
-    if (error) {
-      throw new Error(error.message);
-    }
+    await createBookingWithSchemaCompatibility(supabase, insertPayload);
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {

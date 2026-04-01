@@ -16,6 +16,7 @@ type BookingOption = {
 };
 
 type BookingFormProps = {
+  dateLabel?: string;
   airplaneOptions: BookingOption[];
   pilotOptions: BookingOption[];
   slotOptions: string[];
@@ -28,6 +29,7 @@ type BookingFormProps = {
 };
 
 export function BookingForm({
+  dateLabel,
   airplaneOptions,
   pilotOptions,
   slotOptions,
@@ -56,6 +58,20 @@ export function BookingForm({
         onSubmit(values);
       }}
     >
+      {dateLabel ? (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="booking-date">
+            Den rezervace
+          </label>
+          <input
+            id="booking-date"
+            value={dateLabel}
+            readOnly
+            className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-slate-700"
+          />
+        </div>
+      ) : null}
+
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="booking-airplane">
           Letadlo

@@ -47,6 +47,16 @@ function formatSlotFromIso(value: string) {
   }).format(new Date(value));
 }
 
+function formatDateLabel(value: string) {
+  return new Intl.DateTimeFormat("cs-CZ", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T12:00:00.000Z`));
+}
+
 export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGridProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -260,6 +270,7 @@ export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGrid
       <BookingModal
         isOpen={isModalOpen}
         title={editingBookingId ? "Upravit rezervaci" : "Nová rezervace"}
+        dateLabel={formatDateLabel(date)}
         airplaneOptions={airplaneOptions}
         pilotOptions={pilotOptions}
         slotOptions={slotOptions}

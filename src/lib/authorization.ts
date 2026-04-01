@@ -21,7 +21,7 @@ const clubAdminNavigation: NavigationItem[] = [
 
 const superAdminNavigation: NavigationItem[] = [
   ...clubAdminNavigation,
-  { href: "/admin", label: "Správa" },
+  { href: "/admin/aeroclubs", label: "Správa" },
 ]
 
 export function isSuperAdminRole(role: CurrentUserRole | null | undefined): role is "super_admin" {

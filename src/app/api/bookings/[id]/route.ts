@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/currentUser";
+import { listBookingsForConflictCheck } from "@/lib/bookingPersistence";
 import { ensureNoBookingConflict, validateBookingWindow } from "@/lib/bookings";
 import { requireAuthenticatedUser } from "@/lib/authorization";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
@@ -33,17 +34,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const aeroclubId = ensureAeroclubId(currentUser.aeroclubId);
     const supabase = createServerSupabaseClient();
 
-    const { data: existing, error: existingError } = await supabase
-      .from("bookings")
-      .select("id, start_time, end_time, status")
-      .eq("aeroclub_id", aeroclubId)
-      .eq("airplane_id", payload.airplane_id);
+    const existing = await listBookingsForConflictCheck(supabase, aeroclubId, payload.airplane_id);
 
-    if (existingError) {
-      throw new Error(existingError.message);
-    }
-
-    ensureNoBookingConflict(payload, existing ?? [], id);
+    ensureNoBookingConflict(payload, existing, id);
 
     const updatePayload: Database["public"]["Tables"]["bookings"]["Update"] = {
       airplane_id: payload.airplane_id,

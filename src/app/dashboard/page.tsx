@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getActiveAeroclubId } from "@/lib/activeAeroclub";
+import { syncLegacyPilotsFromAccountPeople } from "@/lib/aeroclubPeople";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { isSupabaseSetupError } from "@/lib/setup";
 import { DashboardCards } from "@/components/dashboard/DashboardCards";
@@ -25,9 +26,9 @@ export default async function DashboardPage() {
     const todayStart = `${today}T00:00:00.000+02:00`;
     const todayEnd = `${today}T23:59:59.999+02:00`;
 
-    const [{ count: airplanesCount }, { count: pilotsCount }, { data: airplanes }, { data: pilots }, { data: bookings }] = await Promise.all([
+    const [accountPeople, { count: airplanesCount }, { data: airplanes }, { data: pilots }, { data: bookings }] = await Promise.all([
+      syncLegacyPilotsFromAccountPeople(supabase, aeroclubId),
       supabase.from("airplanes").select("*", { count: "exact", head: true }).eq("aeroclub_id", aeroclubId),
-      supabase.from("pilots").select("*", { count: "exact", head: true }).eq("aeroclub_id", aeroclubId),
       supabase.from("airplanes").select("id, name").eq("aeroclub_id", aeroclubId),
       supabase.from("pilots").select("id, name").eq("aeroclub_id", aeroclubId),
       supabase
@@ -74,7 +75,7 @@ export default async function DashboardPage() {
             </p>
           </div>
           <Link
-            href="/calendar?newBooking=1"
+            href={`/calendar?date=${today}&newBooking=1`}
             className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
           >
             Nová rezervace
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
 
         <DashboardCards
           airplanesCount={airplanesCount ?? 0}
-          pilotsCount={pilotsCount ?? 0}
+          pilotsCount={accountPeople.length}
           todayBookingsCount={todayBookings.length}
         />
         <TodayBookings bookings={todayBookings} />

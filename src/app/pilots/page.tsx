@@ -1,4 +1,5 @@
 import { getActiveAeroclubId } from "@/lib/activeAeroclub";
+import { listActiveAeroclubAccountPeople } from "@/lib/aeroclubPeople";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { isSupabaseSetupError } from "@/lib/setup";
 import { PilotsPageClient } from "@/components/pilots/PilotsPageClient";
@@ -10,14 +11,9 @@ export default async function PilotsPage() {
   try {
     const supabase = createServerSupabaseClient();
     const aeroclubId = await getActiveAeroclubId();
+    const pilots = await listActiveAeroclubAccountPeople(supabase, aeroclubId);
 
-    const { data } = await supabase
-      .from("pilots")
-      .select("id, name, email")
-      .eq("aeroclub_id", aeroclubId)
-      .order("name", { ascending: true });
-
-    return <PilotsPageClient pilots={data ?? []} />;
+    return <PilotsPageClient pilots={pilots} />;
   } catch (error) {
     if (isSupabaseSetupError(error)) {
       return (

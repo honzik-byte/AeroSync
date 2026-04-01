@@ -1,3 +1,4 @@
+import { syncLegacyPilotsFromAccountPeople } from "@/lib/aeroclubPeople";
 import { getActiveAeroclubId } from "@/lib/activeAeroclub";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { isSupabaseSetupError } from "@/lib/setup";
@@ -15,15 +16,30 @@ function getTodayInPrague() {
   }).format(new Date());
 }
 
-export default async function CalendarPage() {
+function resolveCalendarDate(input: string | string[] | undefined) {
+  const value = Array.isArray(input) ? input[0] : input;
+
+  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return getTodayInPrague();
+}
+
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ date?: string | string[] }>;
+}) {
   try {
     const supabase = createServerSupabaseClient();
     const aeroclubId = await getActiveAeroclubId();
-    const date = getTodayInPrague();
+    const resolvedSearchParams = (await searchParams) ?? {};
+    const date = resolveCalendarDate(resolvedSearchParams.date);
 
-    const [{ data: airplanes }, { data: pilots }, { data: bookings }] = await Promise.all([
+    const [accountPeople, { data: airplanes }, { data: bookings }] = await Promise.all([
+      syncLegacyPilotsFromAccountPeople(supabase, aeroclubId),
       supabase.from("airplanes").select("id, name, type").eq("aeroclub_id", aeroclubId).order("name"),
-      supabase.from("pilots").select("id, name").eq("aeroclub_id", aeroclubId).order("name"),
       supabase
         .from("bookings")
         .select("id, airplane_id, pilot_id, start_time, end_time")
@@ -42,7 +58,10 @@ export default async function CalendarPage() {
         </div>
         <WeeklyCalendar
           airplanes={airplanes ?? []}
-          pilots={pilots ?? []}
+          pilots={accountPeople.map((person) => ({
+            id: person.id,
+            name: person.name,
+          }))}
           bookings={(bookings ?? []).map((booking) => ({
             id: booking.id,
             airplaneId: booking.airplane_id,

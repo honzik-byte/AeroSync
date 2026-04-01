@@ -10,6 +10,7 @@ type BookingOption = {
 type BookingModalProps = {
   isOpen: boolean;
   title: string;
+  dateLabel?: string;
   airplaneOptions: BookingOption[];
   pilotOptions: BookingOption[];
   slotOptions: string[];
@@ -24,6 +25,7 @@ type BookingModalProps = {
 export function BookingModal({
   isOpen,
   title,
+  dateLabel,
   airplaneOptions,
   pilotOptions,
   slotOptions,
@@ -47,6 +49,7 @@ export function BookingModal({
         </div>
 
         <BookingForm
+          dateLabel={dateLabel}
           airplaneOptions={airplaneOptions}
           pilotOptions={pilotOptions}
           slotOptions={slotOptions}

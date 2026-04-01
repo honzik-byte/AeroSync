@@ -1,8 +1,11 @@
+import { isSupabaseSetupError } from "@/lib/setup";
 import { getCurrentUser } from "@/lib/currentUser";
 import { requireClubAdmin } from "@/lib/authorization";
+import { syncLegacyPilotsFromAccountPeople } from "@/lib/aeroclubPeople";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { Card } from "@/components/ui/Card";
 import { PendingBookingsClient } from "@/components/club/PendingBookingsClient";
+import { SetupNotice } from "@/components/ui/SetupNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +31,7 @@ export default async function PendingBookingsPage() {
     }
 
     const supabase = createServerSupabaseClient();
+    await syncLegacyPilotsFromAccountPeople(supabase, currentUser.aeroclubId);
 
     const [{ data: club, error: clubError }, { data: bookings, error: bookingsError }] =
       await Promise.all([
@@ -114,6 +118,15 @@ export default async function PendingBookingsPage() {
       </div>
     );
   } catch (error) {
+    if (isSupabaseSetupError(error)) {
+      return (
+        <SetupNotice
+          title="Schvalování rezervací zatím nejde načíst"
+          description="V Supabase ještě chybí novější booking workflow. Nahraj prosím aktuální `supabase/schema.sql`, aby vznikly sloupce `bookings.status` a související approval data."
+        />
+      );
+    }
+
     if (error instanceof Error) {
       if (error.message === "Uživatel není přihlášený.") {
         return renderAccessNotice(error.message);

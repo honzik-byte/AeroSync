@@ -24,7 +24,7 @@ type WeeklyCalendarProps = {
 export function WeeklyCalendar({ airplanes, pilots, bookings, date }: WeeklyCalendarProps) {
   return (
     <div className="space-y-4">
-      <CalendarToolbar />
+      <CalendarToolbar date={date} />
       <CalendarGrid airplanes={airplanes} pilots={pilots} bookings={bookings} date={date} />
     </div>
   );

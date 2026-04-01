@@ -1,8 +1,10 @@
 import { getCurrentUser } from "@/lib/currentUser";
 import { requireClubAdmin } from "@/lib/authorization";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
+import { isSupabaseSetupError } from "@/lib/setup";
 import { Card } from "@/components/ui/Card";
 import { InviteCodesClient } from "@/components/club/InviteCodesClient";
+import { SetupNotice } from "@/components/ui/SetupNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +59,15 @@ export default async function ClubInvitesPage() {
       <InviteCodesClient clubName={club.name} inviteCodes={inviteCodes ?? []} />
     );
   } catch (error) {
+    if (isSupabaseSetupError(error)) {
+      return (
+        <SetupNotice
+          title="Pozvánky zatím nejdou načíst"
+          description="V Supabase ještě chybí novější schéma AeroSyncu. Nahraj prosím aktuální `supabase/schema.sql`, aby vznikla tabulka pozvánkových kódů."
+        />
+      );
+    }
+
     if (error instanceof Error) {
       if (error.message === "Uživatel není přihlášený.") {
         return renderAccessNotice(error.message);
