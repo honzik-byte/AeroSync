@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/Button"
 
 type LoginFormValues = {
@@ -10,7 +9,6 @@ type LoginFormValues = {
 }
 
 export function LoginForm() {
-  const router = useRouter()
   const [values, setValues] = useState<LoginFormValues>({
     email: "",
     password: "",
@@ -41,7 +39,7 @@ export function LoginForm() {
         throw new Error(payload.message ?? "Přihlášení se nezdařilo.")
       }
 
-      router.push("/dashboard")
+      window.location.assign("/dashboard")
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Přihlášení se nezdařilo.")
     } finally {

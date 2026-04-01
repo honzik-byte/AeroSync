@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/Button"
 
 type RegisterFormValues = {
@@ -12,7 +11,6 @@ type RegisterFormValues = {
 }
 
 export function RegisterForm() {
-  const router = useRouter()
   const [values, setValues] = useState<RegisterFormValues>({
     fullName: "",
     email: "",
@@ -45,7 +43,7 @@ export function RegisterForm() {
         throw new Error(payload.message ?? "Registrace se nezdařila.")
       }
 
-      router.push("/dashboard")
+      window.location.assign("/dashboard")
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Registrace se nezdařila.")
     } finally {
