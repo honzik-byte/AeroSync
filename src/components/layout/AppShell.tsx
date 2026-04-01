@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { getCurrentUser } from "@/lib/currentUser";
+import { resolveRequestPathname } from "@/lib/requestPath";
 
 type AppShellProps = {
   children: ReactNode;
@@ -12,7 +13,7 @@ type AppShellProps = {
 const authRoutes = new Set(["/login", "/register"]);
 
 export async function AppShell({ children }: AppShellProps) {
-  const pathname = (await headers()).get("x-pathname") ?? "/";
+  const pathname = resolveRequestPathname(await headers());
   const isAuthRoute = authRoutes.has(pathname);
   const currentUser = await getCurrentUser();
 
