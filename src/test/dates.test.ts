@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { render, screen } from "@testing-library/react";
 import { AirplaneForm } from "@/components/airplanes/AirplaneForm";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { getNavigationItemsForRole } from "@/lib/authorization";
 import { getActiveAeroclubSlug } from "@/lib/config";
 import { buildTimeSlots, formatTimeLabel } from "@/lib/dates";
 
@@ -48,12 +49,19 @@ describe("getActiveAeroclubSlug", () => {
 
 describe("Sidebar", () => {
   it("zobrazuje české položky navigace", () => {
-    render(createElement(Sidebar));
+    render(
+      createElement(Sidebar, {
+        navigationItems: getNavigationItemsForRole("club_admin"),
+        currentPathname: "/dashboard",
+      }),
+    );
 
     expect(screen.getByText("Přehled")).toBeInTheDocument();
     expect(screen.getByText("Kalendář")).toBeInTheDocument();
     expect(screen.getByText("Letadla")).toBeInTheDocument();
     expect(screen.getByText("Piloti")).toBeInTheDocument();
+    expect(screen.getByText("Členové")).toBeInTheDocument();
+    expect(screen.getByText("Pozvánky")).toBeInTheDocument();
   });
 });
 

@@ -14,6 +14,9 @@ const clubAdminNavigation: NavigationItem[] = [
   ...pilotNavigation,
   { href: "/airplanes", label: "Letadla" },
   { href: "/pilots", label: "Piloti" },
+  { href: "/club/bookings/pending", label: "Schválení" },
+  { href: "/club/members", label: "Členové" },
+  { href: "/club/invites", label: "Pozvánky" },
 ]
 
 const superAdminNavigation: NavigationItem[] = [
@@ -70,7 +73,7 @@ export function requireSuperAdmin(currentUser: CurrentUser | null | undefined): 
 export function requireClubAdmin(currentUser: CurrentUser | null | undefined): CurrentUser {
   const authenticatedUser = requireAuthenticatedUser(currentUser)
 
-  if (!isClubAdminRole(authenticatedUser.role)) {
+  if (!canManageAeroclub(authenticatedUser.role)) {
     throw new Error("Je potřeba role klubového admina.")
   }
 

@@ -18,6 +18,6 @@ export const pilotInputSchema = z.object({
 export const bookingInputSchema = z.object({
   airplane_id: z.string().uuid(),
   pilot_id: z.string().uuid(),
-  start_time: z.string().datetime(),
-  end_time: z.string().datetime(),
+  start_time: z.string().datetime({ offset: true }),
+  end_time: z.string().datetime({ offset: true }),
 });

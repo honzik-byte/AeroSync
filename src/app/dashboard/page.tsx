@@ -1,9 +1,9 @@
+import Link from "next/link";
 import { getActiveAeroclubId } from "@/lib/activeAeroclub";
 import { createServerSupabaseClient } from "@/lib/serverSupabase";
 import { isSupabaseSetupError } from "@/lib/setup";
 import { DashboardCards } from "@/components/dashboard/DashboardCards";
 import { TodayBookings } from "@/components/dashboard/TodayBookings";
-import { Button } from "@/components/ui/Button";
 import { SetupNotice } from "@/components/ui/SetupNotice";
 
 export const dynamic = "force-dynamic";
@@ -73,7 +73,12 @@ export default async function DashboardPage() {
               Základní přehled letadel, pilotů a dnešních rezervací pro rychlou orientaci.
             </p>
           </div>
-          <Button>Nová rezervace</Button>
+          <Link
+            href="/calendar?newBooking=1"
+            className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+          >
+            Nová rezervace
+          </Link>
         </div>
 
         <DashboardCards

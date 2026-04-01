@@ -14,6 +14,7 @@ import {
 import * as authModule from "@/lib/auth";
 import * as currentUserModule from "@/lib/currentUser";
 import {
+  getNavigationItemsForRole,
   isClubAdminRole,
   isSuperAdminRole,
   requireClubAdmin,
@@ -265,17 +266,28 @@ describe("authorization helpers", () => {
     });
   });
 
-  it("requireClubAdmin nepouští super admina", () => {
-    expect(() => requireClubAdmin(makeCurrentUser("super_admin"))).toThrow(
-      "Je potřeba role klubového admina.",
-    );
-  });
+  it("requireClubAdmin pustí klubového admina i super admina", () => {
+    expect(requireClubAdmin(makeCurrentUser("super_admin"))).toMatchObject({
+      role: "super_admin",
+      isSuperAdmin: true,
+    });
 
-  it("requireClubAdmin pustí jen klubového admina", () => {
     expect(requireClubAdmin(makeCurrentUser("club_admin"))).toMatchObject({
       role: "club_admin",
       isClubAdmin: true,
     });
+  });
+
+  it("vrací rozšířenou navigaci pro správu klubu", () => {
+    expect(getNavigationItemsForRole("club_admin")).toEqual([
+      { href: "/dashboard", label: "Přehled" },
+      { href: "/calendar", label: "Kalendář" },
+      { href: "/airplanes", label: "Letadla" },
+      { href: "/pilots", label: "Piloti" },
+      { href: "/club/bookings/pending", label: "Schválení" },
+      { href: "/club/members", label: "Členové" },
+      { href: "/club/invites", label: "Pozvánky" },
+    ]);
   });
 });
 

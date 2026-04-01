@@ -2,8 +2,8 @@
 
 import { BookingModal } from "@/components/bookings/BookingModal";
 import { buildTimeSlots } from "@/lib/dates";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type CalendarBooking = {
   id: string;
@@ -49,9 +49,11 @@ function formatSlotFromIso(value: string) {
 
 export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGridProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
+  const hasHandledNewBookingIntent = useRef(false);
   const [draftValues, setDraftValues] = useState({
     airplaneId: airplanes[0]?.id ?? "",
     pilotId: pilots[0]?.id ?? "",
@@ -87,7 +89,7 @@ export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGrid
     return `${date}T${slot}:00.000+02:00`;
   }
 
-  function openCreateModal(airplaneId: string, startSlot: string) {
+  const openCreateModal = useCallback((airplaneId: string, startSlot: string) => {
     const currentIndex = slotOptions.indexOf(startSlot);
     const fallbackEnd = slotOptions[Math.min(currentIndex + 1, slotOptions.length - 1)] ?? startSlot;
 
@@ -100,7 +102,24 @@ export function CalendarGrid({ airplanes, pilots, bookings, date }: CalendarGrid
       endSlot: fallbackEnd,
     });
     setIsModalOpen(true);
-  }
+  }, [pilots]);
+
+  useEffect(() => {
+    if (hasHandledNewBookingIntent.current) {
+      return;
+    }
+
+    if (searchParams.get("newBooking") !== "1") {
+      return;
+    }
+
+    hasHandledNewBookingIntent.current = true;
+    if (airplanes.length > 0 && pilots.length > 0) {
+      openCreateModal(airplanes[0].id, slotOptions[0] ?? "08:00");
+    }
+
+    router.replace("/calendar");
+  }, [airplanes, openCreateModal, pilots, router, searchParams]);
 
   function openEditModal(booking: SlotBooking) {
     setErrorMessage(undefined);
